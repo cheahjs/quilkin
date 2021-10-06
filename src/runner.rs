@@ -142,8 +142,7 @@ pub async fn test(
     let (ready_tx, ready_rx) = oneshot::channel();
     let server_handle = tokio::spawn(server.run(ready_tx, shutdown_rx));
 
-    let mut address = ready_rx.await?;
-    address.set_ip(Ipv4Addr::LOCALHOST.into());
+    let address = (Ipv4Addr::LOCALHOST, ready_rx.await?);
 
     let handles =
         futures::future::join_all(testsuite.options.tests.into_iter().map(|(name, options)| {

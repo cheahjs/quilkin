@@ -22,10 +22,12 @@ pub enum Error {
     Initialize(String),
     #[error("session error: {0}")]
     Session(SessionError),
-    #[error("failed to bind to port: {0}")]
-    Bind(tokio::io::Error),
     #[error("i/o Error: {0}")]
-    Io(std::io::Error),
+    Bind(std::io::Error),
+    #[error("tokio specific error: {0}")]
+    Tokio(tokio::io::Error),
+    #[error("Error occurred in worker threads: {0}")]
+    Join(tokio::task::JoinError),
     #[error("receive loop exited with an error: {0}")]
     RecvLoop(String),
 }
@@ -45,5 +47,5 @@ macro_rules! from {
 from! {
     Error:
     SessionError => Session;
-    tokio::io::Error => Bind;
+    std::io::Error => Bind;
 }
