@@ -412,7 +412,7 @@ impl Server {
     }
 
     /// bind binds the local configured port
-    fn bind(port: u16) -> Result<Arc<UdpSocket>> {
+    fn bind(port: u16) -> Result<UdpSocket> {
         let socket = socket2::Socket::new(
             socket2::Domain::IPV4,
             socket2::Type::DGRAM,
@@ -430,7 +430,7 @@ impl Server {
         socket.set_nonblocking(true)?;
         socket.bind(&SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port).into())?;
 
-        UdpSocket::from_std(socket.into()).map_err(Error::Tokio).map(Arc::new)
+        UdpSocket::from_std(socket.into()).map_err(Error::Tokio)
     }
 }
 
@@ -557,28 +557,39 @@ mod tests {
         const DATA: &[u8] = &[128, 3, 4, 5, 1];
         const SERVER_PORT: u16 = 12345;
         const CLIENT_PORT: u16 = 54321;
-        let server_socket = Arc::new(Server::bind(SERVER_PORT).unwrap());
-        let server_socket2 = server_socket.clone();
+        let server_socket = Server::bind(SERVER_PORT).unwrap();
+        let server_socket2 = Server::bind(SERVER_PORT).unwrap();
         let client_socket = Server::bind(CLIENT_PORT).unwrap();
 
-        loop {
-            for _ in 0..50 {
-                client_socket.send_to(&DATA, (Ipv4Addr::LOCALHOST, SERVER_PORT)).await.unwrap();
-            }
-            let mut buf = vec![0; 1 << 16];
-            let mut buf2 = vec![0; 1 << 16];
-            let (received_data, received_addr) = tokio::select! {
-                Ok((size, addr)) = server_socket.recv_from(&mut buf) => {
-                    (buf[..size].to_owned(), addr)
-                }
-                Ok((size, addr)) = server_socket2.recv_from(&mut buf2) => {
-                    panic!()
-                }
-            };
+        client_socket.send_to(&DATA, (Ipv4Addr::LOCALHOST, SERVER_PORT)).await.unwrap();
 
-            assert_eq!(received_addr, (Ipv4Addr::LOCALHOST, CLIENT_PORT).into());
-            assert_eq!(DATA, received_data);
+        let (received_data, received_addr) = {
+            let mut buf = vec![0; 1 << 16];
+            let (size, addr) = server_socket.recv_from(&mut buf).await.unwrap();
+
+            (buf[..size].to_owned(), addr)
+        };
+
+        assert_eq!(received_addr, (Ipv4Addr::LOCALHOST, CLIENT_PORT).into());
+        assert_eq!(DATA, received_data);
+
+        // Non-Linux OS' don't currently load balance, and only accept
+        // connections on the last to be successfully bound.
+        #[cfg(any(target_vendor = "apple", target_os = "openbsd", target_os = "netbsd"))] {
+            drop(server_socket);
         }
+
+        client_socket.send_to(&DATA, (Ipv4Addr::LOCALHOST, SERVER_PORT)).await.unwrap();
+
+        let (received_data2, received_addr2) = {
+            let mut buf = vec![0; 1 << 16];
+            let (size, addr) = server_socket2.recv_from(&mut buf).await.unwrap();
+
+            (buf[..size].to_owned(), addr)
+        };
+
+        assert_eq!(received_addr2, (Ipv4Addr::LOCALHOST, CLIENT_PORT).into());
+        assert_eq!(DATA, received_data2);
     }
 
     /*
