@@ -115,13 +115,11 @@ func (p *Provider) run(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C():
-			p.logger.Debug("k8s: listing pods")
 			pods, err := p.podLister.List(labels.Everything())
 			if err != nil {
 				p.logger.WithError(err).Warn("failed to list pods")
 				continue
 			}
-			p.logger.Debug("k8s: listed the following pods:", pods)
 
 			for i := range pods {
 				pod := pods[i]

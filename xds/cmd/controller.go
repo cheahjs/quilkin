@@ -186,8 +186,6 @@ func main() {
 		log.WithError(err).Fatal("failed to get kube config")
 	}
 
-	logger.Debug("Kubernetes config:", k8sConfig.String())
-
 	k8sClient, err := k8s.CreateClient(k8sConfig)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create k8s client")

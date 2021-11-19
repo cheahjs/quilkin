@@ -84,9 +84,7 @@ func runClusterWatch(
 	for {
 		select {
 		case <-ticker.C:
-			logger.Debug("agones: getting endpoints from store")
 			currEndpoints := getEndpointsFromStore(logger, gsLister)
-			logger.Debug("agones: got endpoints:", currEndpoints)
 			if reflect.DeepEqual(currEndpoints, prevEndpoints) {
 				continue
 			}
@@ -117,7 +115,6 @@ func getEndpointsFromStore(
 		log.WithError(err).Warn("failed to list game servers")
 		return endpoints
 	}
-	logger.Debug("agones: listed the following gameservers:", gameServers)
 
 	for _, gs := range gameServers {
 		gsLogger := logger.WithFields(log.Fields{
