@@ -84,9 +84,9 @@ func runClusterWatch(
 	for {
 		select {
 		case <-ticker.C:
-			log.Debug("agones: getting endpoints from store")
+			logger.Debug("agones: getting endpoints from store")
 			currEndpoints := getEndpointsFromStore(logger, gsLister)
-			log.Debug("agones: got endpoints:", currEndpoints)
+			logger.Debug("agones: got endpoints:", currEndpoints)
 			if reflect.DeepEqual(currEndpoints, prevEndpoints) {
 				continue
 			}
