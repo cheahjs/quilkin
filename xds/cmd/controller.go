@@ -90,10 +90,12 @@ func createAgonesClusterProvider(
 
 	informerFactory := externalversions.NewSharedInformerFactoryWithOptions(
 		agonesClient,
-		5*time.Second)
+		0,
+		externalversions.WithNamespace(flags.GameServersNamespace))
+	gsLister := informerFactory.Agones().V1().GameServers().Lister()
 	informerFactory.Start(ctx.Done())
 
-	return agonescluster.NewProvider(logger, informerFactory.Agones().V1().GameServers().Lister(), agonescluster.Config{
+	return agonescluster.NewProvider(logger, gsLister, agonescluster.Config{
 		GameServersNamespace:    flags.GameServersNamespace,
 		GameServersPollInterval: flags.GameServersPollInterval,
 	}), createAgonesProviderHealthCheck(flags.GameServersNamespace, agonesClient)
@@ -131,13 +133,19 @@ func createFilterChainProvider(
 
 	informerFactory := informers.NewSharedInformerFactoryWithOptions(
 		k8sClient,
-		5*time.Second)
+		0,
+		informers.WithNamespace(flags.ProxyNamespace),
+		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+			options.LabelSelector = k8sfilterchain.LabelSelectorProxyRole
+		}),
+	)
+	podLister := informerFactory.Core().V1().Pods().Lister()
 	informerFactory.Start(ctx.Done())
 
 	return k8sfilterchain.NewProvider(
 		logger,
 		clock.RealClock{},
-		informerFactory.Core().V1().Pods().Lister(),
+		podLister,
 		flags.ProxyPollInterval), createFilterChainProviderHealthCheck(flags.ProxyNamespace, k8sClient)
 }
 
