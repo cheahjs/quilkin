@@ -90,8 +90,7 @@ func createAgonesClusterProvider(
 
 	informerFactory := externalversions.NewSharedInformerFactoryWithOptions(
 		agonesClient,
-		5*time.Second,
-		externalversions.WithNamespace(flags.GameServersNamespace))
+		5*time.Second)
 	informerFactory.Start(ctx.Done())
 
 	return agonescluster.NewProvider(logger, informerFactory.Agones().V1().GameServers().Lister(), agonescluster.Config{
@@ -132,12 +131,7 @@ func createFilterChainProvider(
 
 	informerFactory := informers.NewSharedInformerFactoryWithOptions(
 		k8sClient,
-		5*time.Second,
-		informers.WithNamespace(flags.ProxyNamespace),
-		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.LabelSelector = k8sfilterchain.LabelSelectorProxyRole
-		}),
-	)
+		5*time.Second)
 	informerFactory.Start(ctx.Done())
 
 	return k8sfilterchain.NewProvider(
